@@ -1,0 +1,60 @@
+// import { serve } from "@hono/node-server";
+import { Hono, type ErrorHandler } from "hono";
+import { zValidator } from "@hono/zod-validator";
+import { createSalonSchema, reqBodySchema } from "./validators/salon.schema.js";
+
+import AppError from "./utils/AppError.js";
+import { errorHandler } from "./middleware/errorHandlerMiddleware.js";
+import type { Env } from "@projects/types";
+import { cors } from "hono/cors";
+
+const app = new Hono<Env>();
+app.onError(errorHandler);
+app.use("*", cors({ origin: ["http://localhost:3000"] }));
+app.get("/api/v1", (c) => {
+  return c.text("Hello Hono!");
+});
+
+app.get(
+  "/reqBody",
+  zValidator("json", reqBodySchema, (result, c) => {
+    if (!result.success) {
+      // Throw your AppError here, so app.onError catches it!
+      throw new AppError(
+        "VALIDATION_ERROR",
+        400,
+        "Invalid data",
+        result.error.issues,
+      );
+    }
+  }),
+  (c) => {
+    let data = c.req;
+    return c.json(data);
+  },
+);
+
+app.post("/salons", zValidator("json", createSalonSchema), (c) => {
+  const data = c.req.valid("json");
+
+  console.log(data.name);
+
+  return c.json({
+    message: "Salon created successfully!",
+    salon: data,
+  });
+});
+
+if (process.env.NODE_ENV === "development") {
+  import("@hono/node-server").then(({ serve }) => {
+    serve(
+      {
+        fetch: app.fetch,
+        port: 3001,
+      },
+      (info) => {
+        console.log(`Server is running on http://localhost:${info.port}`);
+      },
+    );
+  });
+}
