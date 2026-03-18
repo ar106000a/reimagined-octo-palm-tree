@@ -1,0 +1,13 @@
+{
+  "name": "app",
+  "private": true,
+  "workspaces": [
+    "api",
+    "web",
+    "shared",
+    "auth-api"
+  ],
+  "dependencies": {
+    "zod": "^4.3.6"
+  }
+}
